@@ -1,76 +1,57 @@
+
 # Dataset Preparation
 
 ## Project
-
 Worker Safety Helmet Detection using YOLOv8
 
 ## Target Classes
-
 - person
 - helmet
 - no_helmet
 
-## Dataset Strategy
+## 1. Manual Dataset
 
-The final dataset will combine:
+Images were collected from public image sources like Kaggle datasets and Pexels and manually annotated using Roboflow.
 
-- manually annotated workplace/construction images
-- carefully selected public annotated images
+- 121 images
+- 544 bounding-box annotations
+- Classes: person, helmet, no_helmet
 
-The public images will be reviewed before use to ensure that the annotations and visual domain are suitable for this project.
+Bounding boxes were drawn around visible people, safety helmets, and uncovered upper-head regions.
 
-## Manual Dataset
+## 2. Public Dataset
 
-### Annotation Tool
+Additional annotated images were collected from public datasets on Roboflow Universe. Images were selected based on their relevance to workplace safety, annotation quality, and diversity.
 
-Roboflow Annotate
+Class names were standardized, irrelevant classes such as safety vests were removed, and the cleaned images were combined with the manual dataset.
 
-### Manual Annotation Progress
+- Public source images selected: 237
+- Additional public images were also reviewed and merged.
+- Duplicate images were excluded during merging.
 
-- Images manually annotated: 110+
-- Annotation type: Bounding boxes
-- Annotation status: Completed
+### Sources
 
-### Annotation Guidelines
+1. [Worker-Safety](https://universe.roboflow.com/computer-vision/worker-safety)
+2. [PPE (No Personal)](https://universe.roboflow.com/asimov/ppe-no-personal)
 
-- `person`: bounding box around the whole visible person
-- `helmet`: tight bounding box around the visible safety hard hat
-- `no_helmet`: tight bounding box around the visible uncovered upper-head region
-- Partially visible people are annotated when clearly identifiable
-- Objects are skipped when the class cannot be determined confidently
-- Each visible target object receives its own bounding box
+## Final Dataset
 
-### Dataset Diversity
+After cleaning and merging, the final dataset contains:
 
-The manually selected images include variation in:
+- Total images: 316
+- Total annotations: 1,785
+- Classes: 3
 
-- worker count
-- camera angle
-- background
-- lighting
-- object size
-- helmet and no-helmet cases
-- partially visible workers
-- crowded workplace scenes
+### Class Distribution
 
-## Public Annotated Data
+- person: 872
+- helmet: 545
+- no_helmet: 368
 
-A supplementary public object-detection dataset will also be used.
+### Dataset Split
 
-The public images will be:
+- Training: 221 images (70%)
+- Validation: 63 images (20%)
+- Testing: 32 images (10%)
 
-- manually reviewed before inclusion
-- selected for relevance to workplace/construction safety
-- checked for annotation quality
-- checked for duplicates and near-duplicate video frames
-- mapped to the project classes where necessary
-
-The final public dataset source and license will be documented after the final source is selected.
-
-## Final Dataset Preparation
-
-After combining the manually annotated and reviewed public images, the dataset will be prepared in YOLO format and split into:
-
-- 70% training
-- 20% validation
-- 10% testing
+The final dataset was exported from Roboflow in YOLOv8 format for training in Google Colab.
