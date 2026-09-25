@@ -1,0 +1,2 @@
+# Step 1: UI only. Add image-processing and ML dependencies when needed.
+streamlit==1.64.0

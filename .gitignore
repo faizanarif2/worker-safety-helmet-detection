@@ -1,0 +1,47 @@
+# Python environments and generated files
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+.ipynb_checkpoints/
+
+# Local credentials and Streamlit secrets
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Datasets, checkpoints, and generated experiment output
+/data/
+/dataset/
+/datasets/
+/models/*
+!/models/.gitkeep
+/checkpoints/
+/runs/
+/results/
+/outputs/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+*.safetensors
+*.tflite
+*.zip
+*.tar
+*.tar.gz
+
+# Local logs and operating-system files
+*.log
+.DS_Store
+Thumbs.db
+Desktop.ini
