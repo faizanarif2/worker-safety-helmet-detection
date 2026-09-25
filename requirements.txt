@@ -1,2 +1,3 @@
-# Step 1: UI only. Add image-processing and ML dependencies when needed.
+# Interface and image validation. Add ML dependencies when the model is connected.
 streamlit==1.64.0
+Pillow==12.3.0

@@ -10,7 +10,7 @@ def main() -> None:
     st.set_page_config(
         page_title=APP_TITLE,
         page_icon=APP_ICON,
-        layout="centered",
+        layout="wide",
     )
     render_homepage()
 
