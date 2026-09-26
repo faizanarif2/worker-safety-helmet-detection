@@ -9,6 +9,26 @@ trained checkpoint is integrated. No predictions are simulated and no model is
 downloaded. Counts will represent detected objects, not an automatic assessment
 of each worker's compliance.
 
+
+## Live Demo
+
+The application is deployed on Streamlit Community Cloud.
+
+**Live App:** https://worker-safety-helmet-detection.streamlit.app/
+
+Current status: The application interface is deployed and publicly accessible.
+YOLOv8 model integration is pending.
+
+Users can currently explore the interface and upload images.
+Real helmet detection will be enabled after the trained model is connected.
+
+## Deployment
+
+- Platform: Streamlit Community Cloud
+- Source: GitHub repository
+- Entry point: `streamlit_app.py`
+- Model: Custom-trained YOLOv8 (integration pending)
+
 ### Local Windows setup
 
 Tested with Python 3.13. In PowerShell, from your existing project folder:
