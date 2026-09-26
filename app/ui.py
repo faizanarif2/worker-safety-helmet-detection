@@ -1,4 +1,4 @@
-"""Presentation for the image-upload workspace."""
+"""Presentation for the image-upload and detection dashboard preview."""
 
 from base64 import b64encode
 from pathlib import Path
@@ -15,6 +15,7 @@ from app.config import (
     MAX_UPLOAD_MB,
 )
 from app.image_utils import ImageValidationError, prepare_image
+from app.results import render_prediction_status, render_results
 
 ASSET_DIR = Path(__file__).parent
 
@@ -144,7 +145,36 @@ def render_homepage() -> None:
             with st.container(border=True, key="preview_panel"):
                 render_preview_panel(image)
 
+    render_detection_dashboard(image_available=image is not None)
+
     _render_html('''<footer class="site-footer">
         <span>Built for a safer tomorrow<span class="brand-dot">.</span></span>
         <span>Powered by Streamlit</span>
       </footer>''')
+
+
+def render_detection_dashboard(image_available: bool) -> None:
+    """Show controls and explicit unavailable states until model integration."""
+    with st.container(border=True, key="detection_panel"):
+        _render_html('''<div class="panel-heading"><span class="step-number">03</span>
+          <div><h3>Helmet detection</h3><p>Upload an image, then detect and review the results.</p></div></div>''')
+        action_column, status_column = st.columns([1, 1], gap="large")
+        with action_column:
+            st.button(
+                "Detect Helmets",
+                key="detect_button",
+                type="primary",
+                disabled=True,
+                width="stretch",
+                help="Detection is unavailable until the trained model is connected.",
+            )
+        with status_column:
+            _render_html('''<div class="prediction-status-heading"><h4>Prediction status</h4>
+              <span class="pending-badge">UNAVAILABLE</span></div>''')
+            render_prediction_status()
+            if image_available:
+                st.caption("Image validated. Detection will be available once the trained model is connected.")
+            else:
+                st.caption("Upload a valid image to prepare the workspace. Model integration is still pending.")
+
+    render_results()
