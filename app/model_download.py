@@ -1,12 +1,35 @@
 """Download the chosen private checkpoint once per server process/configuration."""
 
 from hashlib import file_digest, sha256
+import logging
 from pathlib import Path
 from time import sleep
 
 import streamlit as st
 
 from app.config import HF_REPO_ID, MODEL_SHA256, setting
+
+logger = logging.getLogger(__name__)
+
+
+def access_failure(exc: Exception) -> tuple[str, str] | None:
+    """Classify remote failures without exposing response bodies or credentials."""
+    from huggingface_hub.errors import GatedRepoError, RemoteEntryNotFoundError, RevisionNotFoundError
+
+    if isinstance(exc, RemoteEntryNotFoundError):
+        return "file_missing", "The trained model file best.pt was not found at the repository root. The app owner should check the uploaded filename and folder."
+    if isinstance(exc, RevisionNotFoundError):
+        return "revision_missing", "The configured model revision was not found. The app owner should check HF_MODEL_REVISION against the repository branch or commit."
+    if isinstance(exc, GatedRepoError):
+        return "gated_access", "The trained model cannot be accessed because repository access approval is required for the token's account."
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    if status == 401:
+        return "http_401", "The trained model cannot be accessed (HTTP 401). Hugging Face did not authorize this request. The app owner should verify the token's account can read this private repository."
+    if status == 403:
+        return "http_403", "The trained model cannot be accessed (HTTP 403). Hugging Face denied the download. The app owner should check the token's repository read permissions."
+    if status == 404:
+        return "http_404", "The trained model cannot be accessed (HTTP 404). The requested repository or file was not found or is hidden from this token. The app owner should verify the repository ID and best.pt upload using the token's account."
+    return None
 
 
 class CheckpointDownloadError(RuntimeError):
@@ -50,11 +73,12 @@ def download_checkpoint(repo_id: str, revision: str, expected_hash: str,
             ))
             break
         except Exception as exc:
-            status = getattr(getattr(exc, "response", None), "status_code", None)
-            if status in (401, 403, 404):
-                raise CheckpointDownloadError(
-                    "The trained model cannot be accessed. The app owner should check the token, repository revision and best.pt upload."
-                ) from None
+            failure = access_failure(exc)
+            if failure is not None:
+                code, message = failure
+                # Log only our fixed diagnostic code, never the original exception.
+                logger.warning("Checkpoint download failed: %s", code)
+                raise CheckpointDownloadError(message) from None
             if attempt == 1:
                 raise CheckpointDownloadError(
                     "The model download is temporarily unavailable. Please reload to retry."

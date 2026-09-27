@@ -6,6 +6,8 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+import httpx
+from huggingface_hub.errors import GatedRepoError, RemoteEntryNotFoundError, RevisionNotFoundError
 import streamlit as st
 from streamlit.testing.v1 import AppTest
 
@@ -73,7 +75,7 @@ def test_secrets_setting_and_environment_precedence(monkeypatch):
 
 
 @pytest.mark.parametrize("status", [401, 403, 404])
-def test_access_failure_is_safe_and_not_retried(remote_file, status):
+def test_access_failure_is_safe_and_not_retried(remote_file, status, caplog):
     _, download = remote_file
     error = RuntimeError("sensitive response test-token-only")
     error.response = SimpleNamespace(status_code=status)
@@ -81,6 +83,26 @@ def test_access_failure_is_safe_and_not_retried(remote_file, status):
     with pytest.raises(CheckpointDownloadError, match="cannot be accessed") as failure:
         remote_checkpoint()
     assert "test-token" not in str(failure.value)
+    assert f"HTTP {status}" in str(failure.value)
+    assert f"http_{status}" in caplog.text
+    assert "test-token" not in caplog.text
+    assert download.call_count == 1
+
+
+@pytest.mark.parametrize("error_type,status,code,message", [
+    (RemoteEntryNotFoundError, 404, "file_missing", "best.pt was not found"),
+    (RevisionNotFoundError, 404, "revision_missing", "revision was not found"),
+    (GatedRepoError, 403, "gated_access", "access approval is required"),
+])
+def test_specific_hub_errors_have_actionable_safe_messages(remote_file, caplog, error_type, status, code, message):
+    _, download = remote_file
+    response = httpx.Response(status, request=httpx.Request("GET", "https://example.com/best.pt"))
+    download.side_effect = error_type("sensitive response test-token-only", response=response)
+    with pytest.raises(CheckpointDownloadError) as failure:
+        remote_checkpoint()
+    assert message in str(failure.value)
+    assert code in caplog.text
+    assert "test-token" not in str(failure.value) + caplog.text
     assert download.call_count == 1
 
 

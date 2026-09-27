@@ -123,8 +123,23 @@ PyTorch checkpoint. No model-format conversion is included in this change.
 ## Troubleshooting
 
 - **Model access is not configured:** add `HF_TOKEN` in Streamlit Secrets.
-- **Model cannot be accessed:** check token read scope, repository visibility,
-  the revision, and that `best.pt` is uploaded at the repository root.
+- **Model cannot be accessed (HTTP 401):** the download was not authorized.
+  Verify the token belongs to an account that can read this private repository.
+- **Model cannot be accessed (HTTP 403):** the download was denied; verify the
+  token's repository read permissions. Gated repositories instead show an
+  access-approval message.
+- **Model cannot be accessed (HTTP 404):** check the exact repository ID. Private
+  resources can also appear missing when the token lacks access.
+- **best.pt was not found:** check **Files and versions** in Hugging Face. The
+  file must be named exactly `best.pt` at the repository root, not inside `models/`.
+- **Configured model revision was not found:** check `HF_MODEL_REVISION`; use
+  the actual branch name or an existing commit SHA.
+- The server logs contain a safe diagnostic code (`http_401`, `http_403`,
+  `http_404`, `file_missing`, `revision_missing`, or `gated_access`). These messages
+  do not log the original exception, HTTP response or token. The old generic
+  access message could not distinguish these failures; deploy the updated code
+  to see the specific message. Local success with the default `local` source
+  does not test Hugging Face access.
 - **Checksum mismatch:** upload the exact local checkpoint; do not disable the
   check simply to accept an unexpected file.
 - **Download temporarily unavailable:** reload once; check service/network status
