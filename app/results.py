@@ -15,17 +15,24 @@ class Detection:
 
     class_name: str
     confidence: float
+    xyxy: tuple[float, float, float, float] | None = None
 
     def __post_init__(self) -> None:
         if not self.class_name.strip():
             raise ValueError("A detection must have a class name.")
         if not isfinite(self.confidence) or not 0 <= self.confidence <= 1:
             raise ValueError("Confidence must be a finite number between 0 and 1.")
+        if self.xyxy is not None:
+            if len(self.xyxy) != 4 or not all(isfinite(value) for value in self.xyxy):
+                raise ValueError("Bounding box coordinates must be four finite numbers.")
+            x1, y1, x2, y2 = self.xyxy
+            if x2 < x1 or y2 < y1:
+                raise ValueError("Bounding box corners must be ordered.")
 
 
 @dataclass(frozen=True)
 class PredictionResult:
-    """A completed prediction supplied by future inference code.
+    """A completed prediction supplied by inference code.
 
     An empty tuple means inference completed with no detections. None at the
     rendering boundary means no completed result. The caller must discard a
@@ -87,15 +94,17 @@ def render_results(
     *,
     loading: bool = False,
     error_message: str | None = None,
+    model_ready: bool = False,
+    show_status: bool = True,
 ) -> None:
     """Render real supplied data, or explicit unavailable/loading/error states.
 
     Loading and errors suppress any previous result, including its download.
-    The running Step 4 application calls this with no result. Test fixtures
+    Before detection the application calls this with no result. Test fixtures
     belong only in tests, never in this module or the application entrypoint.
     """
     active_result = None if loading or error_message is not None else result
-    if result is not None or loading or error_message is not None:
+    if show_status and (result is not None or loading or error_message is not None):
         render_prediction_status(result, loading=loading, error_message=error_message)
 
     counts = detection_counts(active_result) if active_result is not None else None
@@ -127,6 +136,7 @@ def render_results(
             message = (
                 "Resolve the prediction error and try again." if error_message is not None
                 else "The annotated image will appear when detection finishes." if loading
+                else "Upload an image and select Detect Helmets to see the annotated result." if model_ready
                 else "The trained model must be connected before an annotated image can be generated."
             )
             st.html(f'''<div class="result-placeholder"><h4>{title}</h4><p>{message}</p></div>''')

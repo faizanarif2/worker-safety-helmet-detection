@@ -25,6 +25,7 @@ dist/
 /datasets/
 /models/*
 !/models/.gitkeep
+models/*.pt
 /checkpoints/
 /runs/
 /results/

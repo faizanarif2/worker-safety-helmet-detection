@@ -3,11 +3,12 @@ This project develops an object-detection system for workplace and construction-
 
 ## Streamlit application
 
-The current application is an **interface preview**. Image uploads and validation
-work; detection and annotated-image downloads remain disabled until the selected
-trained checkpoint is integrated. No predictions are simulated and no model is
-downloaded. Counts will represent detected objects, not an automatic assessment
-of each worker's compliance.
+The local application runs real YOLOv8 detection using your selected
+`models/best.pt` checkpoint. Upload an image, select **Detect Helmets**, review
+class counts and confidence scores, and download the annotated PNG. No
+predictions are simulated and no replacement weights are downloaded. Counts
+represent detected objects, not an automatic assessment of each worker's compliance.
+Without a usable checkpoint, uploads still work and detection stays unavailable.
 
 
 ## Live Demo
@@ -17,7 +18,7 @@ The application is deployed on Streamlit Community Cloud.
 **Live App:** https://worker-safety-helmet-detection.streamlit.app/
 
 Current status: The application interface is deployed and publicly accessible.
-YOLOv8 model integration is pending.
+Public model deployment is pending (Step 9); local integration is implemented.
 
 Users can currently explore the interface and upload images.
 Real helmet detection will be enabled after the trained model is connected.
@@ -27,7 +28,7 @@ Real helmet detection will be enabled after the trained model is connected.
 - Platform: Streamlit Community Cloud
 - Source: GitHub repository
 - Entry point: `streamlit_app.py`
-- Model: Custom-trained YOLOv8 (integration pending)
+- Model: Custom-trained YOLOv8 (local checkpoint; public hosting pending)
 
 ### Local Windows setup
 
@@ -45,7 +46,7 @@ Open http://localhost:8501 and keep the terminal running. Press Ctrl+C to stop.
 If the site cannot be reached, check that the command is still running and use
 the Local URL printed in the terminal. Environment activation is not required.
 
-### Using the preview
+### Using the application
 
 Upload a JPG/JPEG, PNG or WebP image to see its original-image preview. Replace
 the file to change the image, or remove it using the uploader's × control.
@@ -55,10 +56,42 @@ corrected, transparency is displayed on white, and animated images use their
 first frame. Uploaded images are processed in memory, without permanent storage.
 
 The interface has no confidence control. The internal inference default is
-`DEFAULT_CONFIDENCE_THRESHOLD = 0.25` in `app/config.py`; Step 8 inference must
-import this value. Individual detection confidence scores will still appear
-when real results are connected. Project and experiment sections are omitted
+`DEFAULT_CONFIDENCE_THRESHOLD = 0.25` in `app/config.py`; inference imports
+this value directly. Individual detection confidence scores appear with real
+results. Project and experiment sections are omitted
 from the public interface by design.
+
+### Local model configuration
+
+Keep the selected checkpoint at `models/best.pt` (excluded from Git). Class IDs
+come from the checkpoint: its three class names must be `person`, `helmet`, and
+`no_helmet`. No numeric ordering is assumed. The model resource is cached; a
+lock serializes access across sessions. Images and results are held in each
+visitor's session, and replacing or removing an image clears its result.
+The predictor is released after each call so the shared resource retains model
+weights without retaining the last visitor's image. Bounding boxes are drawn
+in memory with Pillow from the model's actual coordinates and scores.
+
+Local integration was checked with the supplied checkpoint on CPU using the
+repository's existing annotation screenshot. Model loading, real inference,
+PNG encoding and the Streamlit detection/removal flow passed. This screenshot
+is a functional smoke test, not a validation-set accuracy measurement. Evaluate
+detection quality separately on original workplace images. GPU inference has
+not been verified on this machine.
+
+CPU inference is the default. Optional environment overrides, set before launch:
+
+```powershell
+$env:HELMET_MODEL_PATH = "models/best.pt"
+$env:HELMET_DEVICE = "cpu"
+.\.venv\Scripts\python.exe -m streamlit run streamlit_app.py
+```
+
+An optional CUDA GPU uses `HELMET_DEVICE="0"` and requires a compatible GPU and
+CUDA-enabled PyTorch installation. An unavailable configured GPU produces a
+clear error. Relative model paths resolve from this repository. After changing
+configuration or replacing weights, restart Streamlit. Never commit checkpoints.
+The local checkpoint is not automatically available on Streamlit Community Cloud.
 
 ### Development checks
 
@@ -78,10 +111,14 @@ For manual verification:
 1. Upload a supported image and check its preview and filename.
 2. Replace it with a corrupt image and check that an error replaces the preview.
 3. Upload a valid image again, then remove it and check that the preview clears.
-4. Confirm Detect Helmets and Download annotated image stay disabled, counts
-   show unavailable placeholders, and no confidence slider appears.
+4. With the checkpoint installed, upload a valid image and click Detect Helmets.
+   Check the annotated image, separate class counts and individual confidence
+   scores. Download the PNG and verify it matches the displayed annotation.
+   Replace or remove the input and confirm old results and downloads clear.
+   Without a checkpoint, detection and downloads must remain disabled. No
+   confidence slider should appear in either case.
 5. Resize to a narrow mobile window: panels and summary cards should stack
    without horizontal page scrolling. Use Tab to reach the uploader and check
    its visible focus indicator and label.
 
-Model integration and public deployment remain separate future milestones.
+Public model deployment is reserved for Step 9.

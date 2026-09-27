@@ -1,6 +1,7 @@
-"""Presentation for the image-upload and detection dashboard preview."""
+"""Image upload and real detection dashboard."""
 
 from base64 import b64encode
+from hashlib import sha256
 from pathlib import Path
 import re
 
@@ -16,6 +17,8 @@ from app.config import (
 )
 from app.image_utils import ImageValidationError, prepare_image
 from app.results import render_prediction_status, render_results
+from app.model import LoadedModel, ModelUnavailableError, checkpoint_signature, load_model
+from app.inference import InferenceError, predict
 
 ASSET_DIR = Path(__file__).parent
 
@@ -32,7 +35,9 @@ def _render_html(markup: str) -> None:
     st.html(re.sub(r"<svg\b.*?</svg>", embed_svg, markup, flags=re.DOTALL))
 
 
-def render_header() -> None:
+def render_header(model_ready: bool = False) -> None:
+    availability = "Model ready. Upload an image to detect helmets." if model_ready else "Model unavailable — detection is not available yet."
+    badge = "READY" if model_ready else "INTERFACE PREVIEW"
     _render_html('''
         <header class="site-header">
           <div class="brand">
@@ -59,8 +64,8 @@ def render_header() -> None:
         </section>
         <div class="availability" role="status">
           <span class="status-dot" aria-hidden="true"></span>
-          <p><strong>Image preview is ready.</strong> Model integration pending — detection is not available yet.</p>
-          <span class="preview-tag">INTERFACE PREVIEW</span>
+          <p>{availability}</p>
+          <span class="preview-tag">{badge}</span>
         </div>
         <div class="workspace-heading" id="workspace">
           <div><span class="section-kicker">YOUR WORKSPACE</span><h2>Every detail starts with an image.</h2></div>
@@ -135,7 +140,16 @@ def render_preview_panel(image: Image.Image | None) -> None:
 
 def render_homepage() -> None:
     st.html(ASSET_DIR / "styles.css")
-    render_header()
+    resource = None
+    signature = None
+    model_error = None
+    try:
+        signature = checkpoint_signature()
+        with st.spinner("Preparing the detection model…"):
+            resource = load_model(*signature)
+    except ModelUnavailableError as exc:
+        model_error = str(exc)
+    render_header(model_ready=resource is not None)
     with st.container(key="image_workspace"):
         upload_column, preview_column = st.columns([1, 1], gap="large")
         with upload_column:
@@ -145,7 +159,7 @@ def render_homepage() -> None:
             with st.container(border=True, key="preview_panel"):
                 render_preview_panel(image)
 
-    render_detection_dashboard(image_available=image is not None)
+    render_detection_dashboard(image, resource, signature, model_error)
 
     _render_html('''<footer class="site-footer">
         <span>Built for a safer tomorrow<span class="brand-dot">.</span></span>
@@ -153,28 +167,51 @@ def render_homepage() -> None:
       </footer>''')
 
 
-def render_detection_dashboard(image_available: bool) -> None:
-    """Show controls and explicit unavailable states until model integration."""
+def render_detection_dashboard(
+    image: Image.Image | None,
+    resource: LoadedModel | None,
+    signature: tuple[str, int, int, str] | None,
+    model_error: str | None,
+) -> None:
+    """Keep each visitor's result tied to their current image and checkpoint."""
+    identity = None if image is None else (sha256(image.tobytes()).hexdigest(), image.size, signature)
+    if st.session_state.get("prediction_source") != identity or resource is None:
+        st.session_state.pop("prediction_result", None)
+        st.session_state.pop("prediction_error", None)
+        st.session_state["prediction_source"] = identity
+
     with st.container(border=True, key="detection_panel"):
         _render_html('''<div class="panel-heading"><span class="step-number">03</span>
           <div><h3>Helmet detection</h3><p>Upload an image, then detect and review the results.</p></div></div>''')
         action_column, status_column = st.columns([1, 1], gap="large")
         with action_column:
-            st.button(
-                "Detect Helmets",
-                key="detect_button",
-                type="primary",
-                disabled=True,
-                width="stretch",
-                help="Detection is unavailable until the trained model is connected.",
+            clicked = st.button(
+                "Detect Helmets", key="detect_button", type="primary",
+                disabled=image is None or resource is None, width="stretch",
+                help="Upload a valid image to detect helmets." if resource is not None
+                     else "Detection is unavailable until the trained model is connected.",
             )
         with status_column:
-            _render_html('''<div class="prediction-status-heading"><h4>Prediction status</h4>
-              <span class="pending-badge">UNAVAILABLE</span></div>''')
-            render_prediction_status()
-            if image_available:
-                st.caption("Image validated. Detection will be available once the trained model is connected.")
-            else:
-                st.caption("Upload a valid image to prepare the workspace. Model integration is still pending.")
+            badge = "READY" if resource is not None else "UNAVAILABLE"
+            _render_html(f'''<div class="prediction-status-heading"><h4>Prediction status</h4>
+              <span class="pending-badge">{badge}</span></div>''')
+            if model_error:
+                st.info(model_error)
+            elif image is None:
+                st.info("Model ready. Upload a valid image to begin.")
+            elif not clicked and st.session_state.get("prediction_result") is None and not st.session_state.get("prediction_error"):
+                st.info("Image ready. Select Detect Helmets to begin.")
+            if clicked:
+                st.session_state.pop("prediction_result", None)
+                st.session_state.pop("prediction_error", None)
+                with st.spinner("Detecting helmets… Please wait."):
+                    try:
+                        st.session_state["prediction_result"] = predict(image, resource)
+                    except InferenceError as exc:
+                        st.session_state["prediction_error"] = str(exc)
+            result = st.session_state.get("prediction_result")
+            error = st.session_state.get("prediction_error")
+            if result is not None or error:
+                render_prediction_status(result, error_message=error)
 
-    render_results()
+    render_results(result, error_message=error, model_ready=resource is not None, show_status=False)
