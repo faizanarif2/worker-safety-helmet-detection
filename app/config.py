@@ -15,6 +15,8 @@ MAX_IMAGE_SIDE = 8192
 # Fixed inference default. Inference imports this directly;
 # it is intentionally not exposed through the UI or session state.
 DEFAULT_CONFIDENCE_THRESHOLD = 0.25
+# Overlapping helmet/no_helmet boxes compete only with each other, not people.
+HEAD_CONFLICT_IOU_THRESHOLD = 0.5
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 HF_REPO_ID = "faizanarif233/worker-safety-helmet-detection"

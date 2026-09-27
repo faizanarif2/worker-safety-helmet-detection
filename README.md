@@ -129,6 +129,13 @@ For manual verification:
 ### Limitations and future improvements
 
 The detector can miss small or occluded heads and produce incorrect labels.
+When `helmet` and `no_helmet` boxes overlap with intersection-over-union of at
+least 0.5, post-processing keeps the higher-confidence label. Person boxes are
+excluded from this rule. Counts, details and annotations all use the filtered
+detections. The developer-controlled threshold is `HEAD_CONFLICT_IOU_THRESHOLD`
+in `app/config.py`. This heuristic removes conflicting labels but does not
+correct classification errors; tightly overlapping different heads may also
+be merged, and poorly aligned duplicate boxes may remain.
 Counts describe separate detected objects; they do not establish workplace
 safety or automatically associate a helmet with a particular person. Training
 metrics are not fabricated or displayed as live prediction guarantees.
