@@ -3,8 +3,9 @@ This project develops an object-detection system for workplace and construction-
 
 ## Streamlit application
 
-The local application runs real YOLOv8 detection using your selected
-`models/best.pt` checkpoint. Upload an image, select **Detect Helmets**, review
+The application runs real YOLOv8 detection using your selected
+`models/best.pt` checkpoint locally, or the same checkpoint downloaded from your
+private Hugging Face repository when configured for deployment. Upload an image, select **Detect Helmets**, review
 class counts and confidence scores, and download the annotated PNG. No
 predictions are simulated and no replacement weights are downloaded. Counts
 represent detected objects, not an automatic assessment of each worker's compliance.
@@ -18,7 +19,8 @@ The application is deployed on Streamlit Community Cloud.
 **Live App:** https://worker-safety-helmet-detection.streamlit.app/
 
 Current status: The application interface is deployed and publicly accessible.
-Public model deployment is pending (Step 9); local integration is implemented.
+Private model download support is implemented. Cloud secrets, the owner-managed
+Git push and public inference verification are still pending (Step 9).
 
 Users can currently explore the interface and upload images.
 Real helmet detection will be enabled after the trained model is connected.
@@ -28,7 +30,10 @@ Real helmet detection will be enabled after the trained model is connected.
 - Platform: Streamlit Community Cloud
 - Source: GitHub repository
 - Entry point: `streamlit_app.py`
-- Model: Custom-trained YOLOv8 (local checkpoint; public hosting pending)
+- Model: Custom-trained YOLOv8 (local or authenticated Hugging Face download)
+
+Follow [the deployment guide](docs/deployment.md) for exact token permissions,
+Streamlit Secrets, troubleshooting and the public verification checklist.
 
 ### Local Windows setup
 
@@ -121,4 +126,14 @@ For manual verification:
    without horizontal page scrolling. Use Tab to reach the uploader and check
    its visible focus indicator and label.
 
-Public model deployment is reserved for Step 9.
+### Limitations and future improvements
+
+The detector can miss small or occluded heads and produce incorrect labels.
+Counts describe separate detected objects; they do not establish workplace
+safety or automatically associate a helmet with a particular person. Training
+metrics are not fabricated or displayed as live prediction guarantees.
+
+Public CPU speed, resource usage and multi-user behavior must be verified after
+deployment. Future improvements include evaluating more representative workplace
+photos, expanding difficult examples in the dataset, and investigating ONNX only
+if measured hosting limits require it. The checkpoint and training remain unchanged.

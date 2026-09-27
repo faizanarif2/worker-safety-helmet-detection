@@ -1,5 +1,10 @@
 # Application and local trained-model inference.
+--extra-index-url https://download.pytorch.org/whl/cpu
+# CPU wheels on Community Cloud avoid installing CUDA libraries.
+torch==2.14.0+cpu; sys_platform == "linux"
+torchvision==0.29.0+cpu; sys_platform == "linux"
 streamlit==1.64.0
 Pillow==12.3.0
 ultralytics==8.4.163
 opencv-python==4.12.0.88
+huggingface-hub==1.33.0

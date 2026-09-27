@@ -144,8 +144,8 @@ def render_homepage() -> None:
     signature = None
     model_error = None
     try:
-        signature = checkpoint_signature()
         with st.spinner("Preparing the detection model…"):
+            signature = checkpoint_signature()
             resource = load_model(*signature)
     except ModelUnavailableError as exc:
         model_error = str(exc)

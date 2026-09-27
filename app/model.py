@@ -1,4 +1,4 @@
-"""Load only the explicitly configured local checkpoint and cache its resource."""
+"""Load the selected local or downloaded checkpoint and cache its resource."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -7,7 +7,8 @@ from typing import Any
 
 import streamlit as st
 
-from app.config import inference_device, model_path
+from app.config import inference_device, model_path, setting
+from app.model_download import CheckpointDownloadError, remote_checkpoint
 
 
 class ModelUnavailableError(RuntimeError):
@@ -23,7 +24,16 @@ class LoadedModel:
 
 
 def checkpoint_signature() -> tuple[str, int, int, str]:
-    path = model_path().resolve()
+    source = setting("HELMET_MODEL_SOURCE", "local").lower()
+    if source == "huggingface":
+        try:
+            path = remote_checkpoint()
+        except CheckpointDownloadError as exc:
+            raise ModelUnavailableError(str(exc)) from None
+    elif source == "local":
+        path = model_path().resolve()
+    else:
+        raise ModelUnavailableError("The model source configuration is invalid. Contact the app owner.")
     try:
         if path.suffix.lower() != ".pt" or not path.is_file():
             raise ModelUnavailableError("Model not connected. The trained checkpoint is unavailable.")

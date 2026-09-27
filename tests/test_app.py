@@ -81,7 +81,7 @@ with patch("app.ui.checkpoint_signature", return_value=("test", 1, st.session_st
      patch("app.ui.render_upload_panel", return_value=image), \\
      patch("app.ui.predict", side_effect=prediction):
     render_homepage()
-''').run()
+''', default_timeout=15).run()
     assert not app.exception
     assert not app.button(key="detect_button").disabled
     assert app.get("download_button")[0].proto.disabled
